@@ -17,7 +17,7 @@ public class InventoryRepository : IInventoryRepository
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         _logger = logger;
     }
-
+    //Cambio rama dev
     private SqlConnection CreateConnection() => new SqlConnection(_connectionString);
 
     public async Task<(bool Exists, bool IsUpdated)> UpsertInventoryAsync(ShopifyInventoryDto item, string platform, CancellationToken cancellationToken = default)
