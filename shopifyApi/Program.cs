@@ -41,6 +41,7 @@ builder.Services.AddHangfire(config =>
           .UseRecommendedSerializerSettings()
           .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection"), new SqlServerStorageOptions
           {
+              SchemaName = "HangFireShopify",
               CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
               SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
               QueuePollInterval = TimeSpan.Zero,
@@ -59,8 +60,17 @@ builder.Services.AddHangfireServer(options =>
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                        ?? throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection en appsettings");
 
-builder.Services.AddScoped<IInventoryRepository>(_ => new InventoryRepository(connectionString));
-builder.Services.AddScoped<ISyncLogRepository>(_ => new SyncLogRepository(connectionString));
+builder.Services.AddScoped<IInventoryRepository>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<InventoryRepository>>();
+    return new InventoryRepository(connectionString, logger);
+});
+
+builder.Services.AddScoped<ISyncLogRepository>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<SyncLogRepository>>();
+    return new SyncLogRepository(connectionString, logger);
+});
 
 // INTEGRACIÓN SHOPIFY
 builder.Services.AddHttpClient("shopify", client =>
@@ -72,6 +82,11 @@ builder.Services.AddScoped<IShopifyInventoryClient, ShopifyInventoryClient>();
 
 // SERVICIO DE NEGOCIO
 builder.Services.AddScoped<InventorySyncService>();
+
+// JOBS
+builder.Services.AddScoped<FullInventorySyncJob>();
+builder.Services.AddScoped<DailyInventoryUpdateJob>();
+builder.Services.AddScoped<PriceUpdateJob>();
 
 // LOGGING
 builder.Logging.ClearProviders();
